@@ -359,9 +359,17 @@ impl Ktx2Texture {
         // 0 for plain 2D, or `FACE_SLICE_WHOLE_LEVEL` to upload an entire mip level
         // (all slices/faces) in one call.
         let texture = unsafe { &*self.texture };
-        if level >= texture.numLevels || layer >= texture.numLayers {
+
+        let valid_face_slice = if texture.numDimensions == 3 {
+            let depth = (texture.baseDepth >> level).max(1);
+            face_slice == FACE_SLICE_WHOLE_LEVEL || face_slice < depth
+        } else {
+            face_slice < texture.numFaces
+        };
+        if level >= texture.numLevels || layer >= texture.numLayers || !valid_face_slice {
             return Err(Error::InvalidValue);
         }
+
         if face_slice != FACE_SLICE_WHOLE_LEVEL {
             let max_face_slice = if texture.isCubemap {
                 texture.numFaces
